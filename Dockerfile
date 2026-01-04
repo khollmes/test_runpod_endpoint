@@ -21,7 +21,7 @@ RUN uv pip install -r /requirements.txt --system
 
 # install torch
 RUN pip install --no-cache-dir torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
-
+RUN python -c "import optimum; import optimum.bettertransformer; print('ok')"
 # Add src files
 ADD src .
 
