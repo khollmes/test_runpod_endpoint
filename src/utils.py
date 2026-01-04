@@ -140,17 +140,13 @@ def list_embeddings_to_response(
     )
 
 def to_jsonable(obj):
-    # Pydantic v2
     if hasattr(obj, "model_dump"):
         return obj.model_dump()
-    # Pydantic v1
     if hasattr(obj, "dict"):
         return obj.dict()
-    # Dataclasses
     if hasattr(obj, "__dataclass_fields__"):
         from dataclasses import asdict
         return asdict(obj)
-    # Last resort (will throw if still not serializable)
     return obj
     
 def to_rerank_response(
