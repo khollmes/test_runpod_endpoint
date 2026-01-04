@@ -139,7 +139,20 @@ def list_embeddings_to_response(
         usage=dict(prompt_tokens=usage, total_tokens=usage),
     )
 
-
+def to_jsonable(obj):
+    # Pydantic v2
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    # Pydantic v1
+    if hasattr(obj, "dict"):
+        return obj.dict()
+    # Dataclasses
+    if hasattr(obj, "__dataclass_fields__"):
+        from dataclasses import asdict
+        return asdict(obj)
+    # Last resort (will throw if still not serializable)
+    return obj
+    
 def to_rerank_response(
     scores: List[float],
     model=str,
@@ -147,20 +160,20 @@ def to_rerank_response(
     documents: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     if documents is None:
-        return dict(
+        return to_jsonable(dict(
             model=model,
             results=[
                 dict(relevance_score=score, index=count)
                 for count, score in enumerate(scores)
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
-        )
+        ))
     else:
-        return dict(
+        return to_jsonable(dict(
             model=model,
             results=[
                 dict(relevance_score=score, index=count, document=doc)
                 for count, (score, doc) in enumerate(zip(scores, documents))
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
-        )
+        ))
