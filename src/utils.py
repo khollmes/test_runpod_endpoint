@@ -138,16 +138,6 @@ def list_embeddings_to_response(
         ],
         usage=dict(prompt_tokens=usage, total_tokens=usage),
     )
-
-def to_jsonable(obj):
-    if hasattr(obj, "model_dump"):
-        return obj.model_dump()
-    if hasattr(obj, "dict"):
-        return obj.dict()
-    if hasattr(obj, "__dataclass_fields__"):
-        from dataclasses import asdict
-        return asdict(obj)
-    return obj
     
 def to_rerank_response(
     scores: List[float],
@@ -156,20 +146,20 @@ def to_rerank_response(
     documents: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     if documents is None:
-        return to_jsonable(dict(
+        return dict(
             model=model,
             results=[
                 dict(relevance_score=score, index=count)
                 for count, score in enumerate(scores)
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
-        ))
+        )
     else:
-        return to_jsonable(dict(
+        return dict(
             model=model,
             results=[
                 dict(relevance_score=score, index=count, document=doc)
                 for count, (score, doc) in enumerate(zip(scores, documents))
             ],
             usage=dict(prompt_tokens=usage, total_tokens=usage),
-        ))
+        )
