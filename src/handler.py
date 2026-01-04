@@ -12,26 +12,20 @@ except Exception as e:
 
 
 def _to_jsonable(x):
-    # Already JSON types
     if isinstance(x, (dict, list, str, int, float, bool)) or x is None:
         return x
-    # Pydantic v2
     if hasattr(x, "model_dump"):
         return x.model_dump()
-    # Pydantic v1
     if hasattr(x, "dict"):
         return x.dict()
-    # Fallback: try __dict__
     if hasattr(x, "__dict__"):
         return x.__dict__
-    # Last resort: stringify
     return {"value": str(x)}
 
 
 async def async_generator_handler(job: dict[str, Any]):
     job_input = job.get("input", {})
-
-    # OpenAI routing mode (if you use it)
+    print('test is in')
     if job_input.get("openai_route"):
         openai_route = job_input.get("openai_route")
         openai_input = job_input.get("openai_input")
