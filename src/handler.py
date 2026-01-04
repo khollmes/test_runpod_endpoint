@@ -3,63 +3,80 @@ from utils import create_error_response
 from typing import Any
 from embedding_service import EmbeddingService
 
-# Gracefully catch configuration errors (e.g. missing env vars) so the user sees
-# a clean message instead of a full Python traceback when the container starts.
 try:
     embedding_service = EmbeddingService()
-except Exception as e:  # noqa: BLE001  (intercept everything on startup)
+except Exception as e:
     import sys
-
     sys.stderr.write(f"\nstartup failed: {e}\n")
     sys.exit(1)
 
 
-async def async_generator_handler(job: dict[str, Any]):
-    """Handle the requests and embedding/rerank them asynchronously."""
-    job_input = job["input"]
-    if job_input.get("openai_route"):
-        openai_route, openai_input = job_input.get("openai_route"), job_input.get(
-            "openai_input"
-        )
+def _to_jsonable(x):
+    # Already JSON types
+    if isinstance(x, (dict, list, str, int, float, bool)) or x is None:
+        return x
+    # Pydantic v2
+    if hasattr(x, "model_dump"):
+        return x.model_dump()
+    # Pydantic v1
+    if hasattr(x, "dict"):
+        return x.dict()
+    # Fallback: try __dict__
+    if hasattr(x, "__dict__"):
+        return x.__dict__
+    # Last resort: stringify
+    return {"value": str(x)}
 
-        if openai_route and openai_route == "/v1/models":
+
+async def async_generator_handler(job: dict[str, Any]):
+    job_input = job.get("input", {})
+
+    # OpenAI routing mode (if you use it)
+    if job_input.get("openai_route"):
+        openai_route = job_input.get("openai_route")
+        openai_input = job_input.get("openai_input")
+
+        if not openai_input:
+            return create_error_response("Missing openai_input").model_dump()
+
+        if openai_route == "/v1/models":
             call_fn, kwargs = embedding_service.route_openai_models, {}
-        elif openai_route and openai_route == "/v1/embeddings":
+
+        elif openai_route == "/v1/embeddings":
             model_name = openai_input.get("model")
-            if not openai_input:
-                return create_error_response("Missing input").model_dump()
             if not model_name:
-                return create_error_response(
-                    "Did not specify model in openai_input"
-                ).model_dump()
+                return create_error_response("Did not specify model in openai_input").model_dump()
+
             call_fn, kwargs = embedding_service.route_openai_get_embeddings, {
                 "embedding_input": openai_input.get("input"),
                 "model_name": model_name,
                 "return_as_list": True,
             }
+
         else:
-            return create_error_response(
-                f"Invalid OpenAI Route: {openai_route}"
-            ).model_dump()
+            return create_error_response(f"Invalid OpenAI Route: {openai_route}").model_dump()
+
     else:
-        # handle the request for reranking
+        # Standard mode: rerank or embedding
         if job_input.get("query"):
             call_fn, kwargs = embedding_service.infinity_rerank, {
                 "query": job_input.get("query"),
                 "docs": job_input.get("docs"),
-                "return_docs": job_input.get("return_docs"),
+                "return_docs": job_input.get("return_docs", False),
                 "model_name": job_input.get("model"),
             }
         elif job_input.get("input"):
             call_fn, kwargs = embedding_service.route_openai_get_embeddings, {
                 "embedding_input": job_input.get("input"),
                 "model_name": job_input.get("model"),
+                "return_as_list": True,
             }
         else:
             return create_error_response(f"Invalid input: {job}").model_dump()
+
     try:
         out = await call_fn(**kwargs)
-        return out
+        return _to_jsonable(out)   # <<< KEY FIX
     except Exception as e:
         return create_error_response(str(e)).model_dump()
 
