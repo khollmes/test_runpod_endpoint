@@ -3,7 +3,7 @@
     {
       "name": "Super_basic_test",
       "input": {
-        "model": "BAAI/bge-m3",
+        "model": "baai/bge-m3",
         "input": "Hello, world!"
       },
       "timeout": 30
@@ -16,7 +16,7 @@
     "env": [
       {
         "key": "MODEL_NAMES",
-        "value": "BAAI/bge-m3"
+        "value": "baai/bge-m3"
       }
     ]
   }
