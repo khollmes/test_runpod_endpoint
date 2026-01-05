@@ -1,18 +1,18 @@
 {
   "tests": [
     {
-      "name": "basic_test",
+      "name": "Super_basic_test",
       "input": {
         "model": "BAAI/bge-m3",
         "input": "Hello, world!"
       },
-      "timeout": 10000
+      "timeout": 30
     }
   ],
   "config": {
     "gpuTypeId": "NVIDIA RTX A5000",
     "gpuCount": 1,
-    "allowedCudaVersions": ["12.7", "12.6", "12.5", "12.4"],
+    "allowedCudaVersions": ["12.4"],
     "env": [
       {
         "key": "MODEL_NAMES",
