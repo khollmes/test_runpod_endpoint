@@ -1,15 +1,30 @@
 import runpod
 from utils import create_error_response
-from typing import Any
+from typing import Any, Optional, List, Union
 from embedding_service import EmbeddingService
 from runpod import RunPodLogger
-try:
-    embedding_service = EmbeddingService()
-except Exception as e:
-    import sys
-    sys.stderr.write(f"\nstartup failed: {e}\n")
-    sys.exit(1)
+from pydantic import BaseModel, Field, ValidationError
+
 log = RunPodLogger()
+log.info("handler module imported")
+
+# Lazy init instead of creating at import time
+_embedding_service: Optional[EmbeddingService] = None
+
+
+def get_embedding_service() -> EmbeddingService:
+    global _embedding_service
+    if _embedding_service is None:
+        log.info("initializing EmbeddingService...")
+        try:
+            _embedding_service = EmbeddingService()
+            log.info("EmbeddingService initialized")
+        except Exception as e:
+            log.exception(f"EmbeddingService startup failed: {e}")
+            # re-raise so caller knows initialization failed
+            raise
+    return _embedding_service
+
 
 def _to_jsonable(x):
     if isinstance(x, (dict, list, str, int, float, bool)) or x is None:
@@ -23,16 +38,49 @@ def _to_jsonable(x):
     return {"value": str(x)}
 
 
+class InputModel(BaseModel):
+    # Use input_ as the attribute name and accept "input" from incoming dict
+    input_: Optional[Union[str, List[Any], dict]] = Field(None, alias="input")
+    openai_route: Optional[str] = None
+    openai_input: Optional[dict] = None
+    query: Optional[str] = None
+    docs: Optional[List[Any]] = None
+    model: Optional[str] = None
+    return_docs: Optional[bool] = False
+
+
 async def async_generator_handler(job: dict[str, Any]):
-    job_input = job.get("input", {})
+    log.info("async_generator_handler called")
+    # Validate job input early with pydantic
+    raw_input = job.get("input", {})
+    try:
+        job_input = InputModel.parse_obj(raw_input)
+    except ValidationError as ve:
+        err_msg = f"Invalid job input: {ve}"
+        log.exception(err_msg)
+        yield _to_jsonable(create_error_response(err_msg).model_dump())
+        return
+    except Exception as e:
+        # Unexpected error during parsing
+        log.exception(f"Unexpected error parsing input: {e}")
+        yield _to_jsonable(create_error_response(str(e)).model_dump())
+        return
+
+    # now get the embedding service (may raise, and will be logged by get_embedding_service)
+    try:
+        embedding_service = get_embedding_service()
+    except Exception as e:
+        yield _to_jsonable(create_error_response(f"service init failed: {e}").model_dump())
+        return
+
     # keep client informed that the async job started
-    log.info("in async_generator_handler")
+    log.info("in async_generator_handler (after validation)")
 
     # handle "OpenAI route" style requests
-    if job_input.get("openai_route"):
+    if job_input.openai_route:
         yield "openai_route"
-        openai_route = job_input.get("openai_route")
-        openai_input = job_input.get("openai_input")
+        openai_route = job_input.openai_route
+        openai_input = job_input.openai_input
 
         if not openai_input:
             yield _to_jsonable(create_error_response("Missing openai_input").model_dump())
@@ -59,19 +107,19 @@ async def async_generator_handler(job: dict[str, Any]):
 
     # handle other input types
     else:
-        if job_input.get("query"):
+        if job_input.query:
             log.info("in rerank")
             call_fn, kwargs = embedding_service.infinity_rerank, {
-                "query": job_input.get("query"),
-                "docs": job_input.get("docs"),
-                "return_docs": job_input.get("return_docs", False),
-                "model_name": job_input.get("model"),
+                "query": job_input.query,
+                "docs": job_input.docs,
+                "return_docs": job_input.return_docs or False,
+                "model_name": job_input.model,
             }
-        elif job_input.get("input"):
+        elif job_input.input_ is not None:
             log.info("in embedding")
             call_fn, kwargs = embedding_service.route_openai_get_embeddings, {
-                "embedding_input": job_input.get("input"),
-                "model_name": job_input.get("model"),
+                "embedding_input": job_input.input_,
+                "model_name": job_input.model,
                 "return_as_list": True,
             }
         else:
@@ -85,14 +133,23 @@ async def async_generator_handler(job: dict[str, Any]):
         yield out_json
         return
     except Exception as e:
+        log.exception("handler error during execution")
         yield _to_jsonable(create_error_response(str(e)).model_dump())
         return
 
 
 if __name__ == "__main__":
-    runpod.serverless.start(
-        {
-            "handler": async_generator_handler,
-            "concurrency_modifier": lambda x: embedding_service.config.runpod_max_concurrency,
-        }
-    )
+    log.info("in main")
+    # ensure embedding service is created when running standalone so concurrency lambda can access config
+try:
+    es = get_embedding_service()
+except Exception:
+    log.exception("failed to initialize embedding service in __main__")
+    raise
+
+runpod.serverless.start(
+    {
+        "handler": async_generator_handler,
+        "concurrency_modifier": lambda x: es.config.runpod_max_concurrency,
+    }
+)
