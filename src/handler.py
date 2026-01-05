@@ -140,15 +140,15 @@ async def async_generator_handler(job: dict[str, Any]):
 if __name__ == "__main__":
     log.info("in main")
     # ensure embedding service is created when running standalone so concurrency lambda can access config
-try:
-    es = get_embedding_service()
-except Exception:
-    log.info("failed to initialize embedding service in __main__")
-    raise
+    try:
+        es = get_embedding_service()
+    except Exception:
+        log.error("failed to initialize embedding service in __main__", exc_info=True)
+        raise
 
-runpod.serverless.start(
-    {
-        "handler": async_generator_handler,
-        "concurrency_modifier": lambda x: es.config.runpod_max_concurrency,
-    }
-)
+    runpod.serverless.start(
+        {
+            "handler": async_generator_handler,
+            "concurrency_modifier": lambda x: es.config.runpod_max_concurrency,
+        }
+    )
