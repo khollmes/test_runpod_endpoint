@@ -1,5 +1,9 @@
 runpod~=1.7.0
+python-dotenv>=1.0.0
+pydantic>=2.7,<3
+numpy>=1.26,<2
 infinity-emb[torch]==0.0.77
+# transformers pinned for peft HybridCache compatibility
+transformers==4.46.3
 einops # deployment of custom code with nomic
-transformers<4.49
 git+https://github.com/pytorch-labs/float8_experimental.git
