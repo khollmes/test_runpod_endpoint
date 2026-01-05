@@ -2,4 +2,5 @@ runpod~=1.7.0
 infinity-emb[torch]==0.0.77
 einops # deployment of custom code with nomic
 transformers<4.49
+optimum==1.21.4
 git+https://github.com/pytorch-labs/float8_experimental.git
