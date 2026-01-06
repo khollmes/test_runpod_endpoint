@@ -35,7 +35,7 @@ class EmbeddingServiceConfig:
                 "Missing required environment variable 'MODEL_NAMES'.\n"
                 "Please provide at least one HuggingFace model ID, or multiple IDs separated by a semicolon.\n"
                 "Examples:\n"
-                "  MODEL_NAMES=BAAI/bge-small-en-v1.5\n"
+                "  MODEL_NAMES=BAAI/bge-reranker-v2-m3\n"
                 "  MODEL_NAMES=BAAI/bge-small-en-v1.5;intfloat/e5-large-v2\n"
             )
         model_names = model_names.split(";")
