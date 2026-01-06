@@ -146,7 +146,7 @@ if __name__ == "__main__":
     try:
         es = get_embedding_service()
     except Exception:
-        log.error("failed to initialize embedding service in __main__", exc_info=True)
+        log.error("failed to initialize embedding service in __main__")
         raise
 
     runpod.serverless.start(
