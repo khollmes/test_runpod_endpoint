@@ -1,15 +1,20 @@
-from config import EmbeddingServiceConfig
+
 import os
 os.environ["INFINITY_DISABLE_OPTIMUM"] = "TRUE" 
-from infinity_emb.engine import AsyncEngineArray, EngineArgs
 
+import runpod
+from runpod import RunPodLogger
+log = RunPodLogger()
+log.info("Early test for debugging")
+
+from config import EmbeddingServiceConfig
+from infinity_emb.engine import AsyncEngineArray, EngineArgs
 from utils import (
     OpenAIModelInfo,
     ModelInfo,
     list_embeddings_to_response,
     to_rerank_response,
 )
-
 import asyncio
 
 
