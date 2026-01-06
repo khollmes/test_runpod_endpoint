@@ -3,17 +3,6 @@ import os
 os.environ["INFINITY_DISABLE_OPTIMUM"] = "TRUE" 
 from infinity_emb.engine import AsyncEngineArray, EngineArgs
 
-engine_args.append(
-    EngineArgs(
-        model_name_or_path=model_name,
-        batch_size=batch_size,
-        engine=self.config.backend,   
-        dtype=dtype,
-        model_warmup=False,
-        lengths_via_tokenize=True,
-        bettertransformer=False,      
-    )
-)
 from utils import (
     OpenAIModelInfo,
     ModelInfo,
