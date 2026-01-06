@@ -1,4 +1,5 @@
 import runpod
+print('test')
 from utils import create_error_response
 from typing import Any, Optional, List, Union
 from embedding_service import EmbeddingService
