@@ -48,7 +48,7 @@ class InputModel(BaseModel):
 
 
 async def async_generator_handler(job: dict[str, Any]):
-    log.info("async_generator_handler called")
+    
     # Validate job input early with pydantic
     raw_input = job.get("input", {})
     try:
@@ -68,12 +68,8 @@ async def async_generator_handler(job: dict[str, Any]):
     except Exception as e:
         raise RuntimeError(f"service init failed: {e}") from e
 
-    # keep client informed that the async job started
-    log.info("in async_generator_handler (after validation)")
 
-    # handle "OpenAI route" style requests
     if job_input.openai_route:
-        yield "openai_route"
         openai_route = job_input.openai_route
         openai_input = job_input.openai_input
 
@@ -114,13 +110,12 @@ async def async_generator_handler(job: dict[str, Any]):
             }
         else:
             raise ValueError(f"Invalid input: {job}")
-
-    # execute the chosen function and stream the result
     try:
         out = await call_fn(**kwargs)
+        log.info(f'received out: {out}')
         out_json = _to_jsonable(out)
         yield out_json
-        return
+        return out_json
     except Exception as e:
         log.info("handler error during execution")
         raise RuntimeError(str(e)) from e
