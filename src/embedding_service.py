@@ -21,7 +21,9 @@ import asyncio
 class EmbeddingService:
     def __init__(self):
         os.environ["INFINITY_DISABLE_OPTIMUM"] = "TRUE" 
+        
         self.config = EmbeddingServiceConfig()
+        
         engine_args = []
         for model_name, batch_size, dtype in zip(
             self.config.model_names, self.config.batch_sizes, self.config.dtypes
@@ -34,6 +36,7 @@ class EmbeddingService:
                     dtype=dtype,
                     model_warmup=False,
                     lengths_via_tokenize=True,
+                    bettertransformer=False,
                 )
             )
 
