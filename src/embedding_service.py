@@ -5,7 +5,6 @@ import os
 import runpod
 from runpod import RunPodLogger
 log = RunPodLogger()
-log.info("Early test for debugging")
 
 from config import EmbeddingServiceConfig
 from infinity_emb.engine import AsyncEngineArray, EngineArgs
@@ -99,6 +98,8 @@ class EmbeddingService:
         )
         if not return_docs:
             docs = None
-        return to_rerank_response(
+        result= to_rerank_response(
             scores=scores, documents=docs, model=model_name, usage=usage
         )
+        log.info(f'the rerank are: {result}')
+        return result
